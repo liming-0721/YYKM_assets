@@ -26,6 +26,7 @@ player.cntv.cn/html5Player/images/cctv_html5player_loading.gif
 img.cctvpic.com/*.gif
 img.cctvpic.com/*.jpg
 img.cctvpic.com/*.png
+player.cntv.cn/html5Player/images/*.png
 
 // 央视频
 yangshipin.cn/assets/*/ysp_account/yspLogin.css

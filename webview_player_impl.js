@@ -2,7 +2,7 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-var WebviewPlayer = {
+var WebviewVideoPlayerImpl = {
   _resetCss() {
     const stylesheets = document.querySelectorAll('link[rel="stylesheet"], style')
     stylesheets.forEach(sheet => sheet.remove())
@@ -37,22 +37,27 @@ var WebviewPlayer = {
   async initialize() {
     await this._waitVideoReady()
 
-    await _WebviewPlayer_hostInitialize[location.host]?.()
+    const error = await WebviewVideoPlayerImpl_hostInitialize[location.host]?.()
+    if (error) return
 
     this._resetCss()
     this._fullscreenVideo()
 
     const videoEl = this._getVideoEl()
     videoEl.addEventListener('play', () => {
-      PlayerWebViewInterface.changeIsPlaying(true)
+      WebviewVideoPlayerInterface.changeIsPlaying(true)
     })
 
     videoEl.addEventListener('pause', () => {
-      PlayerWebViewInterface.changeIsPlaying(false)
+      WebviewVideoPlayerInterface.changeIsPlaying(false)
     })
 
     videoEl.addEventListener('timeupdate', () => {
-      PlayerWebViewInterface.changeCurrentPosition(Math.floor(videoEl.currentTime * 1000))
+      WebviewVideoPlayerInterface.changePosition(Math.floor(videoEl.currentTime * 1000))
+    })
+
+    videoEl.addEventListener('volumechange', () => {
+      if (videoEl.volume === 0) videoEl.volume = 1
     })
 
     videoEl.volume = 1
@@ -62,48 +67,49 @@ var WebviewPlayer = {
     if (videoEl.paused) videoEl.play()
 
     while (true) {
-      await delay(500)
+      await delay(100)
       if (videoEl.videoWidth * videoEl.videoHeight == 0) continue
 
-      PlayerWebViewInterface.changeResolution(videoEl.videoWidth, videoEl.videoHeight)
+      WebviewVideoPlayerInterface.changeResolution(videoEl.videoWidth, videoEl.videoHeight)
       break
     }
 
     while (true) {
-      await delay(500)
+      await delay(100)
       if (videoEl.volume != 0) break
       videoEl.volume = 1
     }
   },
 
-  release() {
-
-  },
-
   play() {
-    document.querySelector('video')?.play()
+    this._getVideoEl()?.play()
   },
 
   pause() {
-    document.querySelector('video')?.pause()
+    this._getVideoEl()?.pause()
   },
 
   stop() {
     this.pause()
   },
 
-  seekToP(position) {
-
-  },
-
   setVolume(volume) {
-    const videoEl = document.querySelector('video')
+    const videoEl = this._getVideoEl()
     if (videoEl) videoEl.volume = volume
   },
 }
 
-var _WebviewPlayer_hostInitialize = {
-  "live.snrtv.com": async () => {
+var WebviewVideoPlayerImpl_hostInitialize = {
+  'tv.cctv.com': async () => {
+    const errorMsgEl = document.getElementById('error_msg_player')
+    if (errorMsgEl) {
+      WebviewVideoPlayerImpl._resetCss()
+      errorMsgEl.style = 'position: fixed; left: -1px; top: -1px; height: calc(2px + 100vh); width: calc(2px + 100vw); z-index: 99999; background: black; color: white; font-size: 3vw; text-align: center; padding-top: 25%;'
+      return true
+    }
+  },
+
+  'live.snrtv.com': async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const channel = urlParams.get('channel')
 
@@ -116,7 +122,7 @@ var _WebviewPlayer_hostInitialize = {
     }
   },
 
-  "live.jstv.com": async () => {
+  'live.jstv.com': async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const channel = urlParams.get('channel')
 
@@ -129,7 +135,7 @@ var _WebviewPlayer_hostInitialize = {
     }
   },
 
-  "www.nbs.cn": async () => {
+  'www.nbs.cn': async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const channel = urlParams.get('channel')
 
@@ -142,7 +148,7 @@ var _WebviewPlayer_hostInitialize = {
     }
   },
 
-  "www.brtn.cn": async () => {
+  'www.brtn.cn': async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const channel = urlParams.get('channel')
 
@@ -152,6 +158,13 @@ var _WebviewPlayer_hostInitialize = {
         li.click()
         break
       }
+    }
+  },
+
+  "web.guangdianyun.tv": async () => {
+    while (true) {
+      if (document.querySelector('video')?.videoWidth) break
+      await delay(100)
     }
   },
 }
